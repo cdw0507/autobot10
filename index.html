@@ -431,17 +431,140 @@ select{background:transparent;border:none;color:var(--tx);font-family:var(--mono
 // ═══════════════════════════════════════════════════════
 //  SECTORS  (종목 중복 없음, 2024 실제 수익률 근사)
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  섹터별 시총 상위 10종목 (2024 기준, 종목 중복 없음)
+// ═══════════════════════════════════════════════════════
 const SECTOR_DEFS = [
-  {id:0, sec:'반도체',    sym:'NVDA', color:'#a78bfa', annRet:2.20, annVol:0.035},
-  {id:1, sec:'빅테크',    sym:'AAPL', color:'#4a9eff', annRet:0.32, annVol:0.018},
-  {id:2, sec:'전기차',    sym:'TSLA', color:'#00e5a0', annRet:-0.05,annVol:0.042},
-  {id:3, sec:'이커머스',  sym:'AMZN', color:'#f5a623', annRet:0.22, annVol:0.022},
-  {id:4, sec:'소셜/광고', sym:'META', color:'#ff7eb3', annRet:0.65, annVol:0.030},
-  {id:5, sec:'스트리밍',  sym:'NFLX', color:'#ff6b35', annRet:0.35, annVol:0.028},
-  {id:6, sec:'헬스케어',  sym:'LLY',  color:'#00d4ff', annRet:0.55, annVol:0.020},
-  {id:7, sec:'금융',      sym:'JPM',  color:'#fbbf24', annRet:0.25, annVol:0.015},
-  {id:8, sec:'에너지',    sym:'XOM',  color:'#c084fc', annRet:0.10, annVol:0.018},
-  {id:9, sec:'암호화폐',  sym:'COIN', color:'#e879f9', annRet:1.10, annVol:0.055},
+  { id:0, sec:'반도체', color:'#a78bfa',
+    stocks:[
+      {sym:'NVDA', annRet:2.20, annVol:0.035},
+      {sym:'AVGO', annRet:0.95, annVol:0.025},
+      {sym:'AMD',  annRet:0.15, annVol:0.038},
+      {sym:'QCOM', annRet:0.20, annVol:0.022},
+      {sym:'INTC', annRet:-0.60,annVol:0.040},
+      {sym:'AMAT', annRet:0.55, annVol:0.028},
+      {sym:'LRCX', annRet:0.48, annVol:0.026},
+      {sym:'KLAC', annRet:0.52, annVol:0.025},
+      {sym:'MRVL', annRet:0.90, annVol:0.035},
+      {sym:'TXN',  annRet:0.08, annVol:0.018},
+    ]},
+  { id:1, sec:'빅테크', color:'#4a9eff',
+    stocks:[
+      {sym:'AAPL', annRet:0.30, annVol:0.018},
+      {sym:'MSFT', annRet:0.15, annVol:0.016},
+      {sym:'GOOGL',annRet:0.35, annVol:0.020},
+      {sym:'GOOG', annRet:0.34, annVol:0.020},
+      {sym:'ORCL', annRet:0.55, annVol:0.022},
+      {sym:'CSCO', annRet:0.10, annVol:0.015},
+      {sym:'ADBE', annRet:0.05, annVol:0.025},
+      {sym:'CRM',  annRet:0.22, annVol:0.024},
+      {sym:'NOW',  annRet:0.42, annVol:0.026},
+      {sym:'INTU', annRet:0.28, annVol:0.020},
+    ]},
+  { id:2, sec:'전기차', color:'#00e5a0',
+    stocks:[
+      {sym:'TSLA', annRet:-0.05,annVol:0.042},
+      {sym:'BYD',  annRet:0.10, annVol:0.035},
+      {sym:'RIVN', annRet:-0.35,annVol:0.065},
+      {sym:'LCID', annRet:-0.50,annVol:0.070},
+      {sym:'NIO',  annRet:-0.40,annVol:0.060},
+      {sym:'LI',   annRet:0.05, annVol:0.045},
+      {sym:'XPEV', annRet:-0.15,annVol:0.055},
+      {sym:'FSR',  annRet:-0.80,annVol:0.090},
+      {sym:'PTRA', annRet:-0.30,annVol:0.065},
+      {sym:'GOEV', annRet:-0.60,annVol:0.085},
+    ]},
+  { id:3, sec:'이커머스', color:'#f5a623',
+    stocks:[
+      {sym:'AMZN', annRet:0.22, annVol:0.022},
+      {sym:'SHOP', annRet:0.30, annVol:0.038},
+      {sym:'MELI', annRet:0.38, annVol:0.032},
+      {sym:'SE',   annRet:0.15, annVol:0.045},
+      {sym:'ETSY', annRet:-0.10,annVol:0.040},
+      {sym:'EBAY', annRet:0.05, annVol:0.018},
+      {sym:'WISH', annRet:-0.70,annVol:0.080},
+      {sym:'POSH', annRet:0.20, annVol:0.042},
+      {sym:'FTCH', annRet:-0.60,annVol:0.075},
+      {sym:'GLBE', annRet:0.45, annVol:0.048},
+    ]},
+  { id:4, sec:'소셜/광고', color:'#ff7eb3',
+    stocks:[
+      {sym:'META', annRet:0.65, annVol:0.028},
+      {sym:'GOOGL',annRet:0.35, annVol:0.020}, // 광고수익 관점 중복허용
+      {sym:'SNAP', annRet:-0.20,annVol:0.055},
+      {sym:'PINS', annRet:0.15, annVol:0.038},
+      {sym:'TWTR', annRet:0.00, annVol:0.030},
+      {sym:'RDDT', annRet:1.20, annVol:0.075},
+      {sym:'BMBL', annRet:-0.25,annVol:0.048},
+      {sym:'MTCH', annRet:-0.15,annVol:0.035},
+      {sym:'ZG',   annRet:0.10, annVol:0.040},
+      {sym:'IAC',  annRet:-0.05,annVol:0.032},
+    ]},
+  { id:5, sec:'스트리밍/엔터', color:'#ff6b35',
+    stocks:[
+      {sym:'NFLX', annRet:0.85, annVol:0.028},
+      {sym:'DIS',  annRet:0.10, annVol:0.022},
+      {sym:'ROKU', annRet:0.05, annVol:0.055},
+      {sym:'PARA', annRet:-0.35,annVol:0.040},
+      {sym:'WBD',  annRet:-0.20,annVol:0.045},
+      {sym:'SPOT', annRet:1.35, annVol:0.048},
+      {sym:'LGF',  annRet:-0.10,annVol:0.038},
+      {sym:'AMC',  annRet:-0.40,annVol:0.065},
+      {sym:'IMAX', annRet:0.20, annVol:0.032},
+      {sym:'CURI', annRet:-0.30,annVol:0.055},
+    ]},
+  { id:6, sec:'헬스케어', color:'#00d4ff',
+    stocks:[
+      {sym:'LLY',  annRet:0.55, annVol:0.022},
+      {sym:'UNH',  annRet:0.05, annVol:0.015},
+      {sym:'JNJ',  annRet:-0.05,annVol:0.012},
+      {sym:'ABBV', annRet:0.20, annVol:0.016},
+      {sym:'MRK',  annRet:0.10, annVol:0.015},
+      {sym:'PFE',  annRet:-0.30,annVol:0.018},
+      {sym:'TMO',  annRet:0.08, annVol:0.016},
+      {sym:'DHR',  annRet:0.05, annVol:0.018},
+      {sym:'ISRG', annRet:0.28, annVol:0.022},
+      {sym:'VRTX', annRet:0.18, annVol:0.020},
+    ]},
+  { id:7, sec:'금융', color:'#fbbf24',
+    stocks:[
+      {sym:'JPM',  annRet:0.42, annVol:0.015},
+      {sym:'BRK',  annRet:0.25, annVol:0.012},
+      {sym:'V',    annRet:0.22, annVol:0.014},
+      {sym:'MA',   annRet:0.18, annVol:0.015},
+      {sym:'BAC',  annRet:0.35, annVol:0.018},
+      {sym:'WFC',  annRet:0.40, annVol:0.018},
+      {sym:'GS',   annRet:0.50, annVol:0.020},
+      {sym:'MS',   annRet:0.28, annVol:0.019},
+      {sym:'AXP',  annRet:0.35, annVol:0.018},
+      {sym:'SCHW', annRet:0.15, annVol:0.022},
+    ]},
+  { id:8, sec:'에너지', color:'#c084fc',
+    stocks:[
+      {sym:'XOM',  annRet:0.14, annVol:0.018},
+      {sym:'CVX',  annRet:0.02, annVol:0.018},
+      {sym:'COP',  annRet:0.08, annVol:0.022},
+      {sym:'EOG',  annRet:0.05, annVol:0.024},
+      {sym:'SLB',  annRet:0.02, annVol:0.022},
+      {sym:'MPC',  annRet:0.28, annVol:0.025},
+      {sym:'PSX',  annRet:0.18, annVol:0.022},
+      {sym:'VLO',  annRet:0.15, annVol:0.025},
+      {sym:'OXY',  annRet:0.05, annVol:0.025},
+      {sym:'HAL',  annRet:-0.02,annVol:0.028},
+    ]},
+  { id:9, sec:'암호화폐', color:'#e879f9',
+    stocks:[
+      {sym:'COIN', annRet:1.35, annVol:0.055},
+      {sym:'MSTR', annRet:3.50, annVol:0.085},
+      {sym:'MARA', annRet:1.80, annVol:0.090},
+      {sym:'RIOT', annRet:0.90, annVol:0.085},
+      {sym:'CLSK', annRet:1.20, annVol:0.088},
+      {sym:'HUT',  annRet:1.10, annVol:0.082},
+      {sym:'BITF', annRet:0.95, annVol:0.080},
+      {sym:'CIFR', annRet:0.80, annVol:0.078},
+      {sym:'BTBT', annRet:0.70, annVol:0.075},
+      {sym:'IREN', annRet:1.50, annVol:0.092},
+    ]},
 ];
 
 const INIT = 1_000_000;
@@ -618,6 +741,10 @@ function makeBots(){
   return SECTOR_DEFS.map(s=>({
     ...s,
     id: s.id,
+    sym: s.stocks[0].sym,       // 현재 보유/감시 중인 종목
+    activeSec: s.sec,           // 현재 활성 섹터 (임시진입 시 변경)
+    isTempEntry: false,         // 임시진입 여부
+    tempFromSec: null,          // 원래 섹터명
     capital:INIT, profit:0, loss:0,
     wins:0, losses:0, trades:0,
     totalFees:0,
@@ -628,11 +755,16 @@ function makeBots(){
     crossHistory:[], history:[],
     lastCross:{type:'none',maFast:null,maSlow:null,above:false},
     status:'watch',
-    // 섹터 전수 관련
     originalSec: s.sec,
-    originalSym: s.sym,
+    originalSym: s.stocks[0].sym,
     xferCount: 0,
-    engine: new PriceEngine(s),
+    // 섹터 내 전체 종목 엔진 (10개)
+    engines: s.stocks.map(st=>({
+      sym: st.sym,
+      engine: new PriceEngine(st),
+      lastCross:{type:'none',maFast:null,maSlow:null,above:false},
+    })),
+    activeEngineIdx: 0,         // 현재 진입한(또는 감시 중인) 종목 인덱스
   }));
 }
 
@@ -650,87 +782,140 @@ function simStep(){
   }
 }
 
+// ── 모멘텀 점수: 골든크로스 강도 (MA 괴리율 + 기울기)
+function momentumScore(closes, fastN, slowN){
+  const maF = sma(closes, fastN);
+  const maS = sma(closes, slowN);
+  const maFprev = sma(closes.slice(0,-3), fastN);
+  if(!maF||!maS||!maFprev||maS===0) return 0;
+  const gap      = (maF - maS) / maS;          // MA 괴리율 (클수록 강한 골든)
+  const slope    = (maF - maFprev) / maFprev;  // 단기MA 기울기
+  const price    = closes[closes.length-1];
+  const aboveMA  = price > maF ? 1 : 0;        // 가격이 단기MA 위
+  return (gap > 0 && slope > 0 && aboveMA) ? gap * 100 + slope * 50 : 0;
+}
+
 function simBot(b){
   if(b.status==='achieved') return;
-  const price = b.engine.tick();
-  const cl = b.engine.closes;
-  const cs = crossSignal(cl, maFastN, maSlowN);
+
+  // ── 1. 섹터 내 전체 종목 틱 + 크로스 계산
+  b.engines.forEach(e=>{
+    const price = e.engine.tick();
+    const cl    = e.engine.closes;
+    const cs    = crossSignal(cl, maFastN, maSlowN);
+    e.lastCross = cs;
+    // 크로스 이벤트 기록
+    if(cs.type==='golden'||cs.type==='dead'){
+      b.crossHistory.unshift({
+        type:cs.type, sym:e.sym, time:simTimeStr(),
+        price:price.toFixed(2),
+        maFast:(cs.maFast||0).toFixed(2), maSlow:(cs.maSlow||0).toFixed(2)
+      });
+      if(b.crossHistory.length>60) b.crossHistory.pop();
+    }
+  });
+
+  // ── 현재 활성 엔진
+  const ae  = b.engines[b.activeEngineIdx];
+  const price = ae.engine.last;
+  const cl    = ae.engine.closes;
+  const cs    = ae.lastCross;
   b.lastCross = cs;
+  b.sym       = ae.sym;
 
-  // 크로스 이벤트 기록
-  if(cs.type==='golden'||cs.type==='dead'){
-    const ev={type:cs.type,time:simTimeStr(),price:price.toFixed(2),
-      maFast:cs.maFast?.toFixed(2),maSlow:cs.maSlow?.toFixed(2)};
-    b.crossHistory.unshift(ev);
-    if(b.crossHistory.length>50) b.crossHistory.pop();
-    notifyTg(b,cs.type,price);
-  }
-
-  // ── 포지션 청산
+  // ── 2. 포지션 청산
   if(b.pos==='long'){
-    const pnlPct=(price-b.entry)/b.entry*100;
-    const exit = cs.type==='dead' || pnlPct>=CFG.tp || pnlPct<=-CFG.sl;
+    const pnlPct = (price - b.entry) / b.entry * 100;
+    const exit   = cs.type==='dead' || pnlPct >= CFG.tp || pnlPct <= -CFG.sl;
     if(exit){
-      // 수수료 계산 (매도)
-      const fee = calcFee(b.posSize, 'sell');
-      b.totalFees += fee.totalKrw;
-      b.feeBreakdown.comm  += fee.commKrw;
-      b.feeBreakdown.exch  += fee.exchKrw;
-      b.feeBreakdown.sec   += fee.secKrw;
-      b.feeBreakdown.finra += fee.finraKrw;
-      b.feeBreakdown.fx    += fee.fxKrw;
-      b.feeBreakdown.plat  += fee.platKrw;
-      b.feeBreakdown.slip  += fee.slipKrw;
-      totalFeesAll         += fee.totalKrw;
-
-      const grossPnl = b.posSize * pnlPct/100;
-      const netPnl   = grossPnl - fee.totalKrw;  // 수수료 차감 순손익
+      const fee = calcFee(b.posSize,'sell');
+      accumFee(b, fee); totalFeesAll += fee.totalKrw;
+      const grossPnl = b.posSize * pnlPct / 100;
+      const netPnl   = grossPnl - fee.totalKrw;
       if(netPnl>=0){b.profit+=netPnl;b.wins++;}
       else{b.loss+=Math.abs(netPnl);b.losses++;}
-      b.capital += netPnl;
-      b.trades++;
+      b.capital += netPnl; b.trades++;
       b.pos=null; b.entry=0; b.posSize=0;
 
-      const reason=cs.type==='dead'?'데드크로스':pnlPct>=CFG.tp?'익절':'손절';
+      // 임시진입 상태였으면 원래 섹터로 복귀 플래그
+      if(b.isTempEntry){
+        b.isTempEntry  = false;
+        b.activeSec    = b.sec;
+        b.activeEngineIdx = 0;
+        toast(`🔙 BOT_${String(b.id+1).padStart(2,'0')} 원래섹터(${b.sec}) 복귀`, 2500);
+      }
+
+      const reason = cs.type==='dead'?'데드크로스':pnlPct>=CFG.tp?'익절':'손절';
       const t={side:'sell',pnl:Math.round(netPnl),grossPnl:Math.round(grossPnl),
-        fee:fee.totalKrw, pct:pnlPct.toFixed(2),
-        time:simTimeStr(),price:price.toFixed(2),reason,
-        type:netPnl>=0?'win':'loss',sym:b.sym,sec:b.sec,
-        capital:Math.round(b.capital),id:b.id};
+        fee:fee.totalKrw,pct:pnlPct.toFixed(2),time:simTimeStr(),
+        price:price.toFixed(2),reason,type:netPnl>=0?'win':'loss',
+        sym:ae.sym, sec:b.activeSec, capital:Math.round(b.capital),id:b.id,
+        isTemp:b.isTempEntry};
       b.history.unshift(t); if(b.history.length>200)b.history.pop();
       globalLog.unshift(t); if(globalLog.length>300)globalLog.pop();
-      if(TG.on&&TG.token&&TG.chatId&&(TG.cond==='sell'||TG.cond==='all'||(TG.cond==='loss'&&t.type==='loss')))
-        tgSend(`[${b.sec}] 매도 ${b.sym}\n사유:${reason}\n총손익:${t.pnl>=0?'+':''}${W(t.pnl)}\n수수료:${W(fee.totalKrw)}\n${t.time}`);
+      notifyTgTrade(b,t,fee);
     }
   }
 
-  // ── 골든크로스 진입 (모멘텀 필터 + 매수 수수료)
-  if(b.pos===null && cs.type==='golden' && momentumOk(cl,maFastN,maSlowN) && b.capital>80000){
-    const posSize = b.capital*(CFG.sz/100);
-    const fee = calcFee(posSize, 'buy');
-    b.totalFees += fee.totalKrw;
-    b.feeBreakdown.comm += fee.commKrw;
-    b.feeBreakdown.exch += fee.exchKrw;
-    b.feeBreakdown.fx   += fee.fxKrw;
-    b.feeBreakdown.plat += fee.platKrw;
-    b.feeBreakdown.slip += fee.slipKrw;
-    totalFeesAll        += fee.totalKrw;
+  // ── 3. 진입 후보 찾기 (포지션 없을 때)
+  if(b.pos===null && b.capital>80000){
 
-    b.pos='long';
-    b.entry=price;
-    b.posSize=posSize - fee.totalKrw;  // 수수료 선차감
-    b.capital -= fee.totalKrw;
+    // 3-A: 섹터 내 골든크로스 종목 스캔 (모멘텀 점수 최고 종목 선택)
+    let bestIdx=-1, bestScore=0;
+    b.engines.forEach((e,i)=>{
+      if(e.lastCross.above){
+        const score = momentumScore(e.engine.closes, maFastN, maSlowN);
+        if(score > bestScore){ bestScore=score; bestIdx=i; }
+      }
+    });
 
-    const t={side:'buy',amount:Math.round(posSize),fee:fee.totalKrw,
-      time:simTimeStr(),price:price.toFixed(2),type:'buy',sym:b.sym,sec:b.sec,
-      capital:Math.round(b.capital),id:b.id};
-    b.history.unshift(t); if(b.history.length>200)b.history.pop();
-    globalLog.unshift(t); if(globalLog.length>300)globalLog.pop();
-    if(TG.on&&TG.token&&TG.chatId&&(TG.cond==='all'||TG.cond==='cross'))
-      tgSend(`[${b.sec}] 🟢골든크로스 매수 ${b.sym} $${price.toFixed(2)}\n금액:${W(t.amount)}\n수수료:${W(fee.totalKrw)}\n${t.time}`);
+    if(bestIdx>=0){
+      // 섹터 내 진입 가능 종목 있음
+      enterPosition(b, bestIdx, false);
+    } else {
+      // 3-B: 섹터 내 골든크로스 없음 → 전체 섹터 스캔 (임시진입)
+      let globalBestBot=-1, globalBestEngIdx=-1, globalBestScore=0;
+      BOTS.forEach((ob,bi)=>{
+        if(bi===b.id) return; // 자기 섹터 제외
+        ob.engines.forEach((e,ei)=>{
+          if(e.lastCross.above){
+            const score = momentumScore(e.engine.closes, maFastN, maSlowN);
+            if(score > globalBestScore){
+              globalBestScore = score;
+              globalBestBot   = bi;
+              globalBestEngIdx= ei;
+            }
+          }
+        });
+      });
+
+      if(globalBestBot>=0 && globalBestScore>0.5){
+        // 타 섹터 임시진입
+        const targetBot = BOTS[globalBestBot];
+        const targetEng = targetBot.engines[globalBestEngIdx];
+        // 봇 b 의 activeEngineIdx를 targetBot 의 해당 엔진으로 임시 교체
+        // (실제로는 b의 engines 배열에 해당 엔진 참조 추가)
+        b._tempEngine  = targetEng;
+        b.isTempEntry  = true;
+        b.tempFromSec  = b.sec;
+        b.activeSec    = targetBot.sec;
+
+        enterPositionEngine(b, targetEng, true,
+          `임시진입(${targetBot.sec})·점수:${globalBestScore.toFixed(2)}`);
+      }
+      // 아무 조건도 안 맞으면 현금 대기
+    }
   }
 
-  // 자산 기록 (매 10틱마다)
+  // ── 임시진입 중 → 원래 섹터 복귀 감시
+  if(b.pos==='long' && b.isTempEntry){
+    // 원래 섹터에 골든크로스 종목이 생기면 다음 청산 후 복귀 예약
+    const homeGolden = b.engines.some(e=>e.lastCross.above &&
+      momentumScore(e.engine.closes, maFastN, maSlowN) > 0.3);
+    if(homeGolden) b._pendingReturn = true;
+  }
+
+  // 자산 기록
   if(totalTicks % 10 === 0){
     b.equity.push(Math.round(b.capital));
     b.equityTimes.push(simTimeStr());
@@ -741,77 +926,113 @@ function simBot(b){
   if(b.capital>=CFG.goal && b.status!=='achieved'){
     b.status='achieved';
     goalAlert(b);
-    // 목표 달성 → 꼴찌 봇에게 섹터 전수 (미달성 봇이 있을 때만)
-    setTimeout(()=>{
-      transferSector(b);
-      checkAllDone();
-    }, 100);
+    setTimeout(()=>{ transferSector(b); checkAllDone(); }, 100);
   }
+}
+
+// 섹터 내 엔진 인덱스로 진입
+function enterPosition(b, engIdx, isTemp){
+  b.activeEngineIdx = engIdx;
+  b.isTempEntry     = isTemp;
+  const ae    = b.engines[engIdx];
+  const price = ae.engine.last;
+  enterPositionEngine(b, ae, isTemp, isTemp?`임시(${b.activeSec})`:'골든크로스');
+}
+
+function enterPositionEngine(b, ae, isTemp, reason){
+  const price   = ae.engine.last;
+  const posSize = b.capital * (CFG.sz/100);
+  const fee     = calcFee(posSize,'buy');
+  accumFee(b, fee); totalFeesAll += fee.totalKrw;
+  b.pos     = 'long';
+  b.entry   = price;
+  b.posSize = posSize - fee.totalKrw;
+  b.capital -= fee.totalKrw;
+  b.sym     = ae.sym;
+  b._tempEngine = isTemp ? ae : null;
+
+  const t={side:'buy', amount:Math.round(posSize), fee:fee.totalKrw,
+    time:simTimeStr(), price:price.toFixed(2), type:'buy',
+    sym:ae.sym, sec:b.activeSec, capital:Math.round(b.capital),
+    id:b.id, reason, isTemp};
+  b.history.unshift(t); if(b.history.length>200)b.history.pop();
+  globalLog.unshift(t); if(globalLog.length>300)globalLog.pop();
+  if(TG.on&&TG.token&&TG.chatId&&(TG.cond==='all'||TG.cond==='cross'))
+    tgSend(`[${b.sec}${isTemp?'→임시:'+b.activeSec:''}] 🟢매수 ${ae.sym} $${price.toFixed(2)}\n${reason}\n금액:${W(t.amount)}\n수수료:${W(fee.totalKrw)}`);
+}
+
+function accumFee(b, fee){
+  b.totalFees += fee.totalKrw;
+  b.feeBreakdown.comm  += fee.commKrw;
+  b.feeBreakdown.exch  += fee.exchKrw;
+  b.feeBreakdown.sec   += fee.secKrw;
+  b.feeBreakdown.finra += fee.finraKrw;
+  b.feeBreakdown.fx    += fee.fxKrw;
+  b.feeBreakdown.plat  += fee.platKrw;
+  b.feeBreakdown.slip  += fee.slipKrw;
+}
+
+function notifyTgTrade(b,t,fee){
+  if(!TG.on||!TG.token||!TG.chatId) return;
+  if(TG.cond==='sell'||TG.cond==='all'||(TG.cond==='loss'&&t.type==='loss'))
+    tgSend(`[${b.sec}] 매도 ${t.sym}\n사유:${t.reason}\n순손익:${t.pnl>=0?'+':''}${W(t.pnl)}\n수수료:${W(fee.totalKrw)}`);
 }
 
 // ═══════════════════════════════════════════════════════
 //  섹터 전수 로직
 // ═══════════════════════════════════════════════════════
 function transferSector(winner){
-  // 달성하지 못한 봇 중 수익률 최하위 봇 찾기
   const candidates = BOTS.filter(b=>b.status!=='achieved' && b.id!==winner.id);
   if(!candidates.length) return;
   const loser = candidates.reduce((worst,b)=>b.capital<worst.capital?b:worst, candidates[0]);
-
   const prevSec = loser.sec;
   const prevSym = loser.sym;
 
-  // 승자의 섹터 파라미터를 패자에게 복사 (자산은 유지, 포지션 청산 후)
+  // 포지션 강제 청산
   if(loser.pos==='long'){
-    // 포지션 강제 청산
-    const price = loser.engine.last;
-    const pnlPct = (price-loser.entry)/loser.entry*100;
-    const fee = calcFee(loser.posSize,'sell');
-    const netPnl = loser.posSize*pnlPct/100 - fee.totalKrw;
+    const ae    = loser._tempEngine || loser.engines[loser.activeEngineIdx];
+    const price = ae.engine.last;
+    const pnlPct= (price-loser.entry)/loser.entry*100;
+    const fee   = calcFee(loser.posSize,'sell');
+    const netPnl= loser.posSize*pnlPct/100 - fee.totalKrw;
     if(netPnl>=0){loser.profit+=netPnl;loser.wins++;}
     else{loser.loss+=Math.abs(netPnl);loser.losses++;}
     loser.capital+=netPnl;
-    loser.totalFees+=fee.totalKrw;
-    loser.feeBreakdown.comm  += fee.commKrw;
-    loser.feeBreakdown.exch  += fee.exchKrw;
-    loser.feeBreakdown.sec   += fee.secKrw;
-    loser.feeBreakdown.finra += fee.finraKrw;
-    loser.feeBreakdown.fx    += fee.fxKrw;
-    loser.feeBreakdown.plat  += fee.platKrw;
-    loser.feeBreakdown.slip  += fee.slipKrw;
-    totalFeesAll             += fee.totalKrw;
+    accumFee(loser,fee); totalFeesAll+=fee.totalKrw;
     loser.trades++;
     loser.pos=null; loser.entry=0; loser.posSize=0;
+    loser.isTempEntry=false; loser._tempEngine=null;
   }
 
-  // 섹터 정보 복사
-  loser.sec   = winner.sec;
-  loser.sym   = winner.sym;
-  loser.color = winner.color;
-  loser.annRet= winner.annRet;
-  loser.annVol= winner.annVol;
+  // 섹터 전수: loser 의 engines 를 winner 섹터 종목으로 교체
+  loser.sec        = winner.sec;
+  loser.color      = winner.color;
+  loser.activeSec  = winner.sec;
+  loser.isTempEntry= false;
   loser.xferCount++;
-
-  // 새 price engine (승자 파라미터로 리셋)
-  loser.engine = new PriceEngine({annRet:winner.annRet, annVol:winner.annVol});
+  loser.activeEngineIdx = 0;
+  // winner의 stocks 파라미터로 새 엔진 생성
+  loser.engines = winner.stocks.map(st=>({
+    sym: st.sym,
+    engine: new PriceEngine(st),
+    lastCross:{type:'none',maFast:null,maSlow:null,above:false},
+  }));
+  loser.sym        = loser.engines[0].sym;
   loser.crossHistory=[];
-  loser.lastCross={type:'none',maFast:null,maSlow:null,above:false};
+  loser.lastCross  ={type:'none',maFast:null,maSlow:null,above:false};
 
   const ev={
-    time: simTimeStr(),
-    winnerSec: winner.sec, winnerSym: winner.sym,
-    loserBot: `BOT_${String(loser.id+1).padStart(2,'0')}`,
-    loserSec: prevSec, loserSym: prevSym,
-    loserCapital: Math.round(loser.capital),
-    loserPct: ((loser.capital-INIT)/INIT*100).toFixed(1),
+    time:simTimeStr(),
+    winnerSec:winner.sec, winnerSym:winner.sym,
+    loserBot:`BOT_${String(loser.id+1).padStart(2,'0')}`,
+    loserSec:prevSec, loserSym:prevSym,
+    loserCapital:Math.round(loser.capital),
+    loserPct:((loser.capital-INIT)/INIT*100).toFixed(1),
   };
-  xferLog.unshift(ev);
-  if(xferLog.length>20) xferLog.pop();
-
+  xferLog.unshift(ev); if(xferLog.length>20)xferLog.pop();
   toast(`🔀 섹터전수: ${winner.sec}→BOT_${String(loser.id+1).padStart(2,'0')}(${prevSec} 대체)`,4000);
-
   if(TG.on&&TG.token&&TG.chatId)
-    tgSend(`🔀[AUTOBOT_10] 섹터 전수 발생!\n✅ 달성봇: ${winner.sec}(${winner.sym})\n📉 인수봇: BOT_${String(loser.id+1).padStart(2,'0')} ${prevSec}→${winner.sec}\n💰 현재자산: ${W(loser.capital)} (${ev.loserPct}%)\n${ev.time}`);
+    tgSend(`🔀[AUTOBOT_10] 섹터 전수!\n✅달성: ${winner.sec}\n📉인수: BOT_${String(loser.id+1).padStart(2,'0')} ${prevSec}→${winner.sec}\n💰${W(loser.capital)} (${ev.loserPct}%)`);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -912,15 +1133,22 @@ function renderGrid(){
     const prog=Math.min(b.capital/CFG.goal*100,100);
     const cs=b.lastCross;
     const wr=b.trades>0?(b.wins/b.trades*100).toFixed(0):0;
+    // 태그
     let tagC='tW',tagT='대기';
     if(b.status==='achieved'){tagC='tA';tagT='달성';}
+    else if(b.isTempEntry){tagC='tW';tagT='임시진입';}
     else if(b.pos==='long'){tagC='tG';tagT='홀딩';}
     else if(cs.above){tagC='tG';tagT='골든존';}
     else{tagC='tR';tagT='데드존';}
-    const maTxt=cs.maFast?`MA${maFastN}:${cs.maFast.toFixed(1)} MA${maSlowN}:${cs.maSlow.toFixed(1)}`:'워밍업...';
+    const maTxt=cs.maFast?`${b.sym} MA${maFastN}:${cs.maFast.toFixed(1)} / MA${maSlowN}:${cs.maSlow.toFixed(1)}`:'워밍업...';
+    // 섹터 내 골든크로스 종목 수
+    const goldenCount = b.engines.filter(e=>e.lastCross.above).length;
+    const scanTxt = `섹터스캔 ${goldenCount}/${b.engines.length}골든`;
     const xferBadge = b.xferCount>0
       ? `<span style="font-size:9px;background:rgba(167,139,250,.15);color:var(--P);border:1px solid rgba(167,139,250,.3);border-radius:3px;padding:1px 5px;margin-left:3px">전수×${b.xferCount}</span>` : '';
-    const origBadge = b.sec!==b.originalSec
+    const tempBadge = b.isTempEntry
+      ? `<div style="font-size:9px;color:var(--A);font-family:var(--mono);margin-top:2px">🔀 임시: ${b.sec}→<span style="color:var(--A);font-weight:600">${b.activeSec}</span> (${b.sym})</div>` : '';
+    const origBadge = (!b.isTempEntry && b.sec!==b.originalSec)
       ? `<div style="font-size:9px;color:var(--t2);font-family:var(--mono);margin-top:2px">원래: ${b.originalSec} → <span style="color:var(--P)">${b.sec}</span></div>` : '';
     return `<div class="card${detBotId===b.id?' sel':''}${b.status==='achieved'?' won':''}"
       style="--cc:${b.color}" id="bc${b.id}" onclick="selectCard(${b.id})">
@@ -929,8 +1157,8 @@ function renderGrid(){
         <span class="csec">${b.sec}</span>
         <span class="ctag ${tagC}">${tagT}</span>
       </div>
-      ${origBadge}
-      <div class="cprow" style="margin-top:${b.sec!==b.originalSec?'4px':'0'}">
+      ${tempBadge}${origBadge}
+      <div class="cprow" style="margin-top:4px">
         <span style="font-family:var(--mono);font-size:10px;color:var(--tx)">${W(b.capital)}</span>
         <span class="cppct" style="color:${b.color}">${prog.toFixed(1)}%</span>
       </div>
@@ -942,8 +1170,8 @@ function renderGrid(){
         <div class="ci"><div class="cil">누적수수료</div><div class="civ" style="color:var(--A)">${W(b.totalFees)}</div></div>
       </div>
       <div class="marow">
-        <div class="madot" style="background:${cs.above?'var(--G)':'var(--R)'}"></div>
-        <span class="matxt">${maTxt}</span>
+        <div class="madot" style="background:${goldenCount>0?'var(--G)':'var(--R)'}"></div>
+        <span class="matxt">${maTxt} · ${scanTxt}</span>
       </div>
       <button class="detail-btn" onclick="event.stopPropagation();openDetail(${b.id})">📊 상세 내역 보기</button>
     </div>`;
@@ -1042,14 +1270,71 @@ function refreshDetail(id){
   if(activeTab==='overview') renderMAChart(b);
   if(activeTab==='chart') renderEquityCharts(b);
   if(activeTab==='log') renderTradeTable(b);
-  renderCrossHist(b);
+  renderSectorScan(b);
+  renderSectorScan(b);
+}
+
+// 섹터 내 10종목 스캔 현황 테이블
+function renderSectorScan(b){
+  const el = qs('#cross-hist');
+  if(!el) return;
+
+  // 종목별 상태 테이블
+  const rows = b.engines.map(e=>{
+    const cs    = e.lastCross;
+    const score = momentumScore(e.engine.closes, maFastN, maSlowN);
+    const price = e.engine.last.toFixed(2);
+    const isActive = (b.sym === e.sym);
+    const statusTxt = cs.above ? '골든존' : '데드존';
+    const statusCol = cs.above ? 'var(--G)' : 'var(--R)';
+    return `<tr style="${isActive?'background:rgba(74,158,255,.07);':''}">
+      <td style="font-weight:${isActive?'600':'400'};color:${isActive?'var(--B)':'var(--tx)'}">${e.sym}${isActive?' ◀':''}</td>
+      <td style="color:${statusCol}">${statusTxt}</td>
+      <td style="color:${cs.maFast?'var(--tx)':'var(--t2)'}">${cs.maFast?cs.maFast.toFixed(1):'-'}</td>
+      <td style="color:${cs.maSlow?'var(--tx)':'var(--t2)'}">${cs.maSlow?cs.maSlow.toFixed(1):'-'}</td>
+      <td style="color:${score>0?'var(--G)':'var(--t2)'}">${score>0?score.toFixed(2):'-'}</td>
+      <td style="color:var(--t2)">$${price}</td>
+    </tr>`;
+  }).join('');
+
+  const tempInfo = b.isTempEntry
+    ? `<div style="margin-bottom:8px;padding:6px 10px;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);border-radius:5px;font-family:var(--mono);font-size:11px;color:var(--A)">
+        🔀 임시진입 중: ${b.sec} → <strong>${b.activeSec}</strong> (${b.sym})
+        ${b._pendingReturn?'· 원래섹터 복귀 대기중':''}
+       </div>` : '';
+
+  el.innerHTML = `
+    ${tempInfo}
+    <div style="font-size:10px;font-family:var(--mono);color:var(--t2);margin-bottom:6px">
+      섹터 내 골든크로스: ${b.engines.filter(e=>e.lastCross.above).length}/${b.engines.length}종목
+    </div>
+    <div style="overflow-x:auto">
+    <table class="trade-table" style="font-size:11px">
+      <thead><tr>
+        <th>종목</th><th>상태</th><th>MA${maFastN}</th><th>MA${maSlowN}</th><th>모멘텀점수</th><th>현재가</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>
+    <div style="font-size:10px;font-family:var(--mono);color:var(--t2);margin-top:8px;margin-bottom:5px">🔀 크로스 이벤트</div>
+    ${b.crossHistory.slice(0,8).map(x=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        padding:5px 8px;background:var(--s2);border-radius:4px;margin-bottom:3px;
+        border-left:2px solid ${x.type==='golden'?'var(--G)':'var(--R)'};font-family:var(--mono);font-size:10px">
+        <span style="font-weight:600">${x.sym}</span>
+        <span style="color:${x.type==='golden'?'var(--G)':'var(--R)'}">${x.type==='golden'?'🟢골든':'🔴데드'}</span>
+        <span style="color:var(--t2)">${x.time}</span>
+        <span style="color:var(--tx)">$${x.price}</span>
+      </div>`).join('')||'<div style="color:var(--t2);font-size:11px;font-family:var(--mono)">크로스 이벤트 없음</div>'}
+  `;
 }
 
 function renderMAChart(b){
-  const cl=b.engine.closes;
-  const n=Math.min(100,cl.length);
-  const slice=cl.slice(-n);
-  const labels=slice.map((_,i)=>i+1);
+  const ae  = b.engines[b.activeEngineIdx] || b.engines[0];
+  const cl  = ae.engine.closes;
+  const n   = Math.min(100,cl.length);
+  const slice = cl.slice(-n);
+  const labels = slice.map((_,i)=>i+1);
   const fastArr=[],slowArr=[];
   for(let i=0;i<n;i++){
     const sub=slice.slice(0,i+1);
@@ -1059,7 +1344,7 @@ function renderMAChart(b){
   const id='ch-ma';
   if(detCharts[id]){detCharts[id].data.datasets[0].data=slice;detCharts[id].data.datasets[1].data=fastArr;detCharts[id].data.datasets[2].data=slowArr;detCharts[id].update('none');return;}
   detCharts[id]=new Chart(qs('#'+id),{type:'line',data:{labels,datasets:[
-    {label:'가격',data:slice,borderColor:'rgba(200,200,220,.5)',borderWidth:1,pointRadius:0,tension:.3},
+    {label:`${ae.sym} 가격`,data:slice,borderColor:'rgba(200,200,220,.5)',borderWidth:1,pointRadius:0,tension:.3},
     {label:`MA${maFastN}`,data:fastArr,borderColor:'#00e5a0',borderWidth:2,pointRadius:0,tension:.3},
     {label:`MA${maSlowN}`,data:slowArr,borderColor:'#ff3d5a',borderWidth:2,pointRadius:0,tension:.3},
   ]},options:chartOpts('가격')});
@@ -1116,20 +1401,6 @@ function chartOpts(yTitle, isBar=false){
 }
 // fallback noop
 function _fb(a,b){return a!=null?a:b}
-
-function renderCrossHist(b){
-  const el=qs('#cross-hist');
-  if(!el) return;
-  el.innerHTML=b.crossHistory.slice(0,10).map(x=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;
-      padding:6px 10px;background:var(--s2);border-radius:5px;margin-bottom:4px;
-      border-left:2px solid ${x.type==='golden'?'var(--G)':'var(--R)'};font-family:var(--mono);font-size:11px">
-      <span>${x.type==='golden'?'🟢 골든':'🔴 데드'}크로스</span>
-      <span style="color:var(--t2)">${x.time}</span>
-      <span style="color:var(--tx)">$${x.price}</span>
-      <span style="color:var(--t2)">MA${maFastN}:${x.maFast} / MA${maSlowN}:${x.maSlow}</span>
-    </div>`).join('')||'<div style="color:var(--t2);font-family:var(--mono);font-size:11px;padding:8px">크로스 이벤트 없음</div>';
-}
 
 function renderTradeTable(b){
   let trades=b.history;
