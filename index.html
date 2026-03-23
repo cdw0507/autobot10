@@ -187,6 +187,7 @@
             font-size: 0.85em;
         }
         .highlight { color: #00ff88; font-weight: bold; }
+        .dead { opacity: 0.4; filter: grayscale(100%); }
     </style>
 </head>
 <body>
@@ -221,7 +222,6 @@
             <div class="fee-info">
                 <strong>📊 TradeStation 수수료 구조:</strong>
                 주식 매도 시 SEC Fee($8/$1M) + FINRA TAF($0.000145/주, max $7.27) |
-                옵션 $0.50/계약 |
                 슬리피지 0.02% 적용
             </div>
         </div>
@@ -240,31 +240,25 @@
         // ==========================================
         class TradeStationFees {
             static STOCK = {
-                commission: 0, // $0 온라인 거래
-                secFeeRate: 8 / 1000000, // $8 per $1,000,000 (매도 시만)
-                finraTafPerShare: 0.000145, // per share (매도 시만)
+                commission: 0,
+                secFeeRate: 8 / 1000000,
+                finraTafPerShare: 0.000145,
                 maxFinraTaf: 7.27,
                 minFinraTaf: 0.01
-            };
-
-            static OPTION = {
-                commissionPerContract: 0.50,
-                finraTafPerContract: 0.002, // 계약당 $0.002
-                maxFinraTaf: 5.50
             };
 
             static calculateStockSellFees(shares, price) {
                 const proceeds = shares * price;
 
-                // SEC Fee (Federal Transaction Fee) - 매도 시만
+                // SEC Fee (매도 시만)
                 const secFee = proceeds * this.STOCK.secFeeRate;
 
-                // FINRA Trading Activity Fee - 매도 시만
+                // FINRA TAF (매도 시만)
                 let finraTaf = shares * this.STOCK.finraTafPerShare;
                 finraTaf = Math.max(this.STOCK.minFinraTaf,
                                    Math.min(finraTaf, this.STOCK.maxFinraTaf));
 
-                // 슬리피지 (시장가 주문 가정, 0.02%)
+                // 슬리피지 0.02%
                 const slippage = proceeds * 0.0002;
 
                 return {
@@ -277,21 +271,12 @@
             }
 
             static calculateBuyFees(shares, price) {
-                // 매수 시에는 커미션만 (TradeStation 주식 매수 $0)
-                const slippage = (shares * price) * 0.0002; // 슬리피지만 적용
+                const slippage = (shares * price) * 0.0002;
                 return {
                     commission: 0,
                     slippage: slippage,
                     total: slippage
                 };
-            }
-
-            static formatFees(fees) {
-                if (fees.secFee !== undefined) {
-                    return `SEC: $${fees.secFee.toFixed(2)}, FINRA: $${fees.finraTaf.toFixed(2)}, Slippage:
-$${fees.slippage.toFixed(2)}`;
-                }
-                return `Slippage: $${fees.slippage.toFixed(2)}`;
             }
         }
 
@@ -305,8 +290,8 @@ $${fees.slippage.toFixed(2)}`;
                 this.initialCapital = initialCapital;
                 this.capital = initialCapital;
                 this.targetAmount = targetAmount;
-                this.position = 0; // 보유 주식 수
-                this.avgPrice = 0; // 평균 매수가
+                this.position = 0;
+                this.avgPrice = 0;
                 this.tradeCount = 0;
                 this.totalFeesPaid = 0;
                 this.achievedTime = null;
@@ -316,15 +301,14 @@ $${fees.slippage.toFixed(2)}`;
                 this.isAlive = true;
             }
 
-            updateReturnRate() {
-                const positionValue = this.position * (this.avgPrice || 1); // 간단화
-                const totalValue = this.capital + positionValue;
-                this.returnRate = (totalValue - this.initialCapital) / this.initialCapital;
+            getTotalValue(currentPrice) {
+                return this.capital + (this.position * currentPrice);
             }
 
-            checkTargetAchievement() {
-                this.updateReturnRate();
-                const totalValue = this.capital + (this.position * (this.avgPrice || 0));
+            checkTargetAchievement(currentPrice) {
+                const totalValue = this.getTotalValue(currentPrice);
+                this.returnRate = (totalValue - this.initialCapital) / this.initialCapital;
+
                 if (totalValue >= this.targetAmount && !this.achievedTime) {
                     this.achievedTime = new Date();
                     return true;
@@ -332,27 +316,29 @@ $${fees.slippage.toFixed(2)}`;
                 return false;
             }
 
-            getTotalValue(currentPrice) {
-                return this.capital + (this.position * currentPrice);
-            }
-
             executeBuy(quantity, price) {
-                if (quantity <= 0) return null;
+                if (quantity <= 0 || !this.isAlive) return null;
+
                 const cost = quantity * price;
                 const fees = TradeStationFees.calculateBuyFees(quantity, price);
                 const totalCost = cost + fees.total;
 
                 if (totalCost > this.capital) {
-                    // 자금 부족 시 가능한 최대 수량 계산
                     const maxQty = Math.floor((this.capital - fees.total) / price);
                     if (maxQty <= 0) return null;
                     return this.executeBuy(maxQty, price);
                 }
 
                 this.capital -= totalCost;
-                // 평균 매수가 조정
-                const totalShares = this.position + quantity;
-                this.avgPrice = ((this.position * this.avgPrice) + (quantity * price)) / totalShares;
+
+                // 평균 단가 계산 (0으로 나누기 방지)
+                if (this.position === 0) {
+                    this.avgPrice = price;
+                } else {
+                    const totalCostBasis = (this.position * this.avgPrice) + (quantity * price);
+                    this.avgPrice = totalCostBasis / (this.position + quantity);
+                }
+
                 this.position += quantity;
                 this.tradeCount++;
                 this.totalFeesPaid += fees.total;
@@ -365,13 +351,13 @@ $${fees.slippage.toFixed(2)}`;
                     time: new Date()
                 };
 
-                return { type: 'BUY', quantity, price, fees };
+                return { type: 'BUY', quantity, price, fees, totalCost };
             }
 
             executeSell(quantity, price) {
-                if (quantity <= 0 || this.position <= 0) return null;
-                const sellQty = Math.min(quantity, this.position);
+                if (quantity <= 0 || this.position <= 0 || !this.isAlive) return null;
 
+                const sellQty = Math.min(quantity, this.position);
                 const proceeds = sellQty * price;
                 const fees = TradeStationFees.calculateStockSellFees(sellQty, price);
                 const netProceeds = proceeds - fees.total;
@@ -388,85 +374,11 @@ $${fees.slippage.toFixed(2)}`;
                     quantity: sellQty,
                     price: price,
                     fees: fees,
+                    netProceeds: netProceeds,
                     time: new Date()
                 };
 
-                return { type: 'SELL', quantity: sellQty, price, fees, netProceeds };
-            }
-        }
-
-        // ==========================================
-        // 섹터 유전 관리자
-        // ==========================================
-        class GeneticSectorManager {
-            constructor() {
-                this.lastAchievedBot = null;
-                this.transferHistory = [];
-            }
-
-            recordAchievement(bot) {
-                if (bot.achievedTime && (!this.lastAchievedBot ||
-                    bot.achievedTime > this.lastAchievedBot.achievedTime)) {
-                    this.lastAchievedBot = bot;
-                    return true;
-                }
-                return false;
-            }
-
-            findWorstBot(bots) {
-                const aliveBots = bots.filter(b => b.isAlive);
-                if (aliveBots.length === 0) return null;
-
-                return aliveBots.reduce((worst, current) => {
-                    const worstValue = worst.getTotalValue(this.getSectorPrice(worst.sector));
-                    const currentValue = current.getTotalValue(this.getSectorPrice(current.sector));
-                    return currentValue < worstValue ? current : worst;
-                });
-            }
-
-            getSectorPrice(sector) {
-                // 섹터별 현재 가격 시뮬레이션 (실제로는 시장 데이터에서 가져와야 함)
-                const basePrices = { TECH: 150, FINANCE: 80, HEALTH: 120, ENERGY: 60, CONSUMER: 100 };
-                return basePrices[sector] || 100;
-            }
-
-            transferSector(bots) {
-                if (!this.lastAchievedBot) {
-                    return { success: false, reason: '전수할 성공 봇이 없습니다' };
-                }
-
-                const worstBot = this.findWorstBot(bots);
-                if (!worstBot) {
-                    return { success: false, reason: '전수 대상 봇이 없습니다' };
-                }
-
-                if (worstBot.id === this.lastAchievedBot.id) {
-                    return { success: false, reason: '이미 최고의 섹터를 보유 중입니다' };
-                }
-
-                const oldSector = worstBot.sector;
-                const newSector = this.lastAchievedBot.sector;
-
-                // 섹터 변경
-                worstBot.sector = newSector;
-                worstBot.sectorTransferCount++;
-
-                const transfer = {
-                    from: this.lastAchievedBot.id,
-                    to: worstBot.id,
-                    sector: newSector,
-                    oldSector: oldSector,
-                    time: new Date()
-                };
-
-                this.transferHistory.push(transfer);
-
-                return {
-                    success: true,
-                    transfer: transfer,
-                    message: `🧬 섹터 전수: Bot ${worstBot.id} [${oldSector}] → [${newSector}] (Bot
-${this.lastAchievedBot.id}로부터)`
-                };
+                return { type: 'SELL', quantity: sellQty, price, fees, netProceeds, proceeds };
             }
         }
 
@@ -477,13 +389,14 @@ ${this.lastAchievedBot.id}로부터)`
             constructor() {
                 this.bots = [];
                 this.sectors = ['TECH', 'FINANCE', 'HEALTH', 'ENERGY', 'CONSUMER'];
-                this.geneticManager = new GeneticSectorManager();
+                this.lastAchievedBot = null;
+                this.transferHistory = [];
                 this.running = false;
                 this.tick = 0;
                 this.totalFeesCollected = 0;
                 this.intervalId = null;
 
-                // 섹터별 가격 데이터 (시뮬레이션용)
+                // 섹터별 가격 데이터
                 this.sectorPrices = {
                     TECH: { price: 150, volatility: 0.03, trend: 0.0002 },
                     FINANCE: { price: 80, volatility: 0.015, trend: 0.0001 },
@@ -492,8 +405,14 @@ ${this.lastAchievedBot.id}로부터)`
                     CONSUMER: { price: 100, volatility: 0.018, trend: 0.00012 }
                 };
 
+                this.init();
+            }
+
+            init() {
                 this.initBots();
+                this.updateUI();
                 this.render();
+                this.log('시스템 초기화 완료. 10개의 봇이 생성되었습니다.');
             }
 
             initBots() {
@@ -504,15 +423,21 @@ ${this.lastAchievedBot.id}로부터)`
                 }
                 this.totalFeesCollected = 0;
                 this.tick = 0;
-                this.geneticManager = new GeneticSectorManager();
+                this.lastAchievedBot = null;
+                this.transferHistory = [];
+            }
+
+            getPriceForSector(sector) {
+                return this.sectorPrices[sector]?.price || 100;
             }
 
             reset() {
                 this.stop();
                 this.initBots();
-                this.clearLogs();
+                document.getElementById('logContainer').innerHTML = '';
                 this.updateUI();
                 this.render();
+                document.getElementById('lastTransfer').textContent = '없음';
                 this.log('시뮬레이션이 리셋되었습니다.', 'warning');
             }
 
@@ -522,8 +447,8 @@ ${this.lastAchievedBot.id}로부터)`
                 document.getElementById('startBtn').disabled = true;
                 document.getElementById('stopBtn').disabled = false;
 
-                this.intervalId = setInterval(() => this.step(), 1000); // 1초마다 틱
-                this.log('시뮬레이션 시작!', 'success');
+                this.intervalId = setInterval(() => this.step(), 1000);
+                this.log('▶ 시뮬레이션 시작!', 'success');
             }
 
             stop() {
@@ -534,7 +459,7 @@ ${this.lastAchievedBot.id}로부터)`
                 }
                 document.getElementById('startBtn').disabled = false;
                 document.getElementById('stopBtn').disabled = true;
-                this.log('시뮬레이션 중지', 'warning');
+                this.log('⏸ 시뮬레이션 중지', 'warning');
             }
 
             updateSectorPrices() {
@@ -542,47 +467,44 @@ ${this.lastAchievedBot.id}로부터)`
                     const data = this.sectorPrices[sector];
                     const change = (Math.random() - 0.5) * data.volatility + data.trend;
                     data.price *= (1 + change);
-                    data.price = Math.max(data.price, 10); // 최소가격 보장
+                    data.price = Math.max(data.price, 5); // 최소가격 $5
                 }
-            }
-
-            getPriceForSector(sector) {
-                return this.sectorPrices[sector]?.price || 100;
             }
 
             step() {
                 this.tick++;
                 this.updateSectorPrices();
 
-                // 각 봇 거래 로직 (간단한 랜덤 전략)
+                // 각 봇 거래 로직
                 this.bots.forEach(bot => {
                     if (!bot.isAlive) return;
 
                     const currentPrice = this.getPriceForSector(bot.sector);
                     const totalValue = bot.getTotalValue(currentPrice);
 
-                    // 간단한 전략: 30% 확률로 매도, 30% 확률로 매수
+                    // 간단한 전략: 랜덤 매매
                     const action = Math.random();
 
                     if (action < 0.3 && bot.position > 0) {
                         // 매도
-                        const sellQty = Math.ceil(bot.position * 0.5); // 50% 매도
+                        const sellQty = Math.ceil(bot.position * (0.3 + Math.random() * 0.4));
                         const result = bot.executeSell(sellQty, currentPrice);
                         if (result) {
                             this.totalFeesCollected += result.fees.total;
-                            if (this.tick % 5 === 0) { // 로그는 간헐적으로
+                            if (this.tick % 3 === 0) {
                                 this.log(`Bot ${bot.id} 매도 ${result.quantity}주 @ $${currentPrice.toFixed(2)} (수
-수료: $${result.fees.total.toFixed(2)})`);
+수료: $${result.fees.total.toFixed(3)})`);
                             }
                         }
-                    } else if (action > 0.7 && bot.capital > currentPrice) {
-                        // 매수
-                        const buyQty = Math.floor((bot.capital * 0.3) / currentPrice); // 자본의 30% 매수
+                    } else if (action > 0.7 && bot.capital > currentPrice * 10) {
+                        // 매수 (최소 $10 이상 남도록)
+                        const maxInvest = bot.capital - 10;
+                        const buyQty = Math.floor(maxInvest * (0.2 + Math.random() * 0.3) / currentPrice);
                         if (buyQty > 0) {
                             const result = bot.executeBuy(buyQty, currentPrice);
                             if (result) {
                                 this.totalFeesCollected += result.fees.total;
-                                if (this.tick % 5 === 0) {
+                                if (this.tick % 3 === 0) {
                                     this.log(`Bot ${bot.id} 매수 ${result.quantity}주 @
 $${currentPrice.toFixed(2)}`);
                                 }
@@ -591,20 +513,23 @@ $${currentPrice.toFixed(2)}`);
                     }
 
                     // 목표 달성 체크
-                    if (bot.checkTargetAchievement()) {
-                        this.geneticManager.recordAchievement(bot);
-                        this.log(`🎯 Bot ${bot.id} 목표금액 달성! (${bot.sector} 섹터) 수익률: ${(bot.returnRate *
-100).toFixed(1)}%`, 'success');
+                    if (bot.checkTargetAchievement(currentPrice)) {
+                        this.lastAchievedBot = bot;
+                        this.log(`🎯 Bot ${bot.id} 목표금액 달성! (${bot.sector} 섹터) 총자산:
+$${totalValue.toFixed(2)}`, 'success');
                     }
 
-                    // 청산 체크 (자본금 20% 이하로 떨어지면 사망)
-                    if (totalValue < bot.initialCapital * 0.2) {
+                    // 청산 체크 (자본금 10% 이하)
+                    if (totalValue < bot.initialCapital * 0.1) {
                         bot.isAlive = false;
-                        this.log(`💀 Bot ${bot.id} 청산되었습니다.`, 'error');
+                        bot.capital = 0;
+                        bot.position = 0;
+                        this.log(`💀 Bot ${bot.id} 청산되었습니다. (남은 자산: $${totalValue.toFixed(2)})`,
+'error');
                     }
                 });
 
-                // 10틱마다 자동 섹터 전수 체크
+                // 10틱마다 자동 섹터 전수
                 if (this.tick % 10 === 0) {
                     this.autoTransfer();
                 }
@@ -613,37 +538,82 @@ $${currentPrice.toFixed(2)}`);
                 this.render();
             }
 
+            findWorstBot() {
+                const aliveBots = this.bots.filter(b => b.isAlive);
+                if (aliveBots.length === 0) return null;
+
+                return aliveBots.reduce((worst, current) => {
+                    const worstValue = worst.getTotalValue(this.getPriceForSector(worst.sector));
+                    const currentValue = current.getTotalValue(this.getPriceForSector(current.sector));
+                    return currentValue < worstValue ? current : worst;
+                });
+            }
+
             autoTransfer() {
-                const result = this.geneticManager.transferSector(this.bots);
-                if (result.success) {
-                    this.log(result.message, 'genetic');
-                    this.updateTransferUI();
-                }
+                if (!this.lastAchievedBot) return;
+
+                const worstBot = this.findWorstBot();
+                if (!worstBot || worstBot.id === this.lastAchievedBot.id) return;
+
+                // 이미 같은 섹터면 전수 안함
+                if (worstBot.sector === this.lastAchievedBot.sector) return;
+
+                const oldSector = worstBot.sector;
+                worstBot.sector = this.lastAchievedBot.sector;
+                worstBot.sectorTransferCount++;
+
+                const transfer = {
+                    from: this.lastAchievedBot.id,
+                    to: worstBot.id,
+                    sector: worstBot.sector,
+                    oldSector: oldSector,
+                    time: new Date()
+                };
+
+                this.transferHistory.push(transfer);
+
+                this.log(`🧬 섹터 전수: Bot ${worstBot.id} [${oldSector}] → [${worstBot.sector}] (Bot
+${this.lastAchievedBot.id}로부터)`, 'genetic');
+                this.updateTransferUI();
             }
 
             forceTransfer() {
-                const result = this.geneticManager.transferSector(this.bots);
-                if (result.success) {
-                    this.log(result.message, 'genetic');
-                    this.updateTransferUI();
-                    this.render();
-                } else {
-                    this.log(`섹터 전수 실패: ${result.reason}`, 'warning');
+                if (!this.lastAchievedBot) {
+                    this.log('전수할 성공 봇이 없습니다. 먼저 목표금액 달성이 필요합니다.', 'warning');
+                    return;
                 }
+
+                const worstBot = this.findWorstBot();
+                if (!worstBot) {
+                    this.log('전수 대상 봇이 없습니다.', 'warning');
+                    return;
+                }
+
+                if (worstBot.id === this.lastAchievedBot.id) {
+                    this.log('이미 최고의 섹터를 보유 중입니다.', 'warning');
+                    return;
+                }
+
+                const oldSector = worstBot.sector;
+                worstBot.sector = this.lastAchievedBot.sector;
+                worstBot.sectorTransferCount++;
+
+                this.log(`🧬 [강제] 섹터 전수: Bot ${worstBot.id} [${oldSector}] → [${worstBot.sector}]`,
+'genetic');
+                this.updateTransferUI();
+                this.render();
             }
 
             updateTransferUI() {
-                const lastTransfer =
-this.geneticManager.transferHistory[this.geneticManager.transferHistory.length - 1];
+                const lastTransfer = this.transferHistory[this.transferHistory.length - 1];
                 if (lastTransfer) {
+                    const timeStr = lastTransfer.time.toLocaleTimeString();
                     document.getElementById('lastTransfer').textContent =
-                        `Bot ${lastTransfer.to} ← ${lastTransfer.sector}
-(${lastTransfer.time.toLocaleTimeString()})`;
+                        `Bot ${lastTransfer.to} ← ${lastTransfer.sector} (${timeStr})`;
                 }
             }
 
             updateUI() {
-                // 통계 업데이트
                 const aliveCount = this.bots.filter(b => b.isAlive).length;
                 const achievedCount = this.bots.filter(b => b.achievedTime !== null).length;
 
@@ -656,8 +626,9 @@ this.geneticManager.transferHistory[this.geneticManager.transferHistory.length -
                 const grid = document.getElementById('botGrid');
                 grid.innerHTML = '';
 
-                // 수익률 순으로 정렬
+                // 수익률 순으로 정렬 (죽은 봇은 뒤로)
                 const sortedBots = [...this.bots].sort((a, b) => {
+                    if (a.isAlive !== b.isAlive) return a.isAlive ? -1 : 1;
                     const valA = a.getTotalValue(this.getPriceForSector(a.sector));
                     const valB = b.getTotalValue(this.getPriceForSector(b.sector));
                     return valB - valA;
@@ -672,15 +643,20 @@ this.geneticManager.transferHistory[this.geneticManager.transferHistory.length -
 
                     const card = document.createElement('div');
                     card.className = `bot-card ${isTargetAchieved ? 'target-achieved' : ''} ${isTransferred ?
-'sector-transferred' : ''}`;
+'sector-transferred' : ''} ${!bot.isAlive ? 'dead' : ''}`;
+
+                    const statusText = !bot.isAlive ? '💀 청산' :
+                                     isTargetAchieved ? '✅ 목표달성' :
+                                     isTransferred ? '🧬 섹터변경' : '⚡ 거래중';
 
                     card.innerHTML = `
                         <div class="bot-header">
-                            <span class="bot-id">Bot #${bot.id} ${index === 0 ? '👑' : ''}</span>
+                            <span class="bot-id">Bot #${bot.id} ${index < 3 && bot.isAlive ? '👑' : ''}</span>
                             <span class="sector-badge sector-${bot.sector}">${bot.sector}</span>
                         </div>
+                        <div style="font-size: 0.9em; margin-bottom: 5px; opacity: 0.8;">${statusText}</div>
                         <div class="progress-bar">
-                            <div class="progress-fill ${progress < 50 ? 'low' : ''}" style="width: ${progress}%">
+                            <div class="progress-fill ${progress < 30 ? 'low' : ''}" style="width: ${progress}%">
                                 ${progress.toFixed(0)}%
                             </div>
                         </div>
@@ -695,7 +671,7 @@ this.geneticManager.transferHistory[this.geneticManager.transferHistory.length -
                             </div>
                             <div class="info-item">
                                 <span class="info-label">보유 주식</span>
-                                <span class="info-value">${bot.position}주</span>
+                                <span class="info-value">${bot.position}주 @ $${currentPrice.toFixed(1)}</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">현금</span>
@@ -707,12 +683,13 @@ this.geneticManager.transferHistory[this.geneticManager.transferHistory.length -
 #ff6b6b">$${bot.totalFeesPaid.toFixed(2)}</span>
                             </div>
                             <div class="info-item">
-                                <span class="info-label">섹터 변경</span>
-                                <span class="info-value">${bot.sectorTransferCount}회</span>
+                                <span class="info-label">수익률</span>
+                                <span class="info-value" style="color: ${bot.returnRate >= 0 ? '#00ff88' :
+'#ff6b6b'}">
+                                    ${(bot.returnRate * 100).toFixed(1)}%
+                                </span>
                             </div>
                         </div>
-                        ${isTargetAchieved ? '<div style="margin-top: 10px; color: #00ff88; font-weight: bold;">✅
-목표 달성!</div>' : ''}
                     `;
 
                     grid.appendChild(card);
@@ -727,19 +704,17 @@ this.geneticManager.transferHistory[this.geneticManager.transferHistory.length -
                 entry.textContent = `[${time}] ${message}`;
                 container.insertBefore(entry, container.firstChild);
 
-                // 로그가 너무 많아지면 오래된 것 삭제
                 while (container.children.length > 100) {
                     container.removeChild(container.lastChild);
                 }
             }
-
-            clearLogs() {
-                document.getElementById('logContainer').innerHTML = '';
-            }
         }
 
-        // 전역 인스턴스
-        const simulation = new TradingSimulation();
+        // 전역 인스턴스 생성
+        let simulation;
+        window.onload = function() {
+            simulation = new TradingSimulation();
+        };
     </script>
 </body>
 </html>
