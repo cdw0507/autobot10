@@ -263,6 +263,7 @@ select{background:transparent;border:none;color:var(--tx);font-family:var(--mono
       </select>
     </div>
     <button class="btn" id="tgbtn" onclick="openTgModal()">✈ 텔레그램</button>
+    <button class="btn" id="pause-btn" onclick="togglePause()" style="min-width:72px">⏸ 일시정지</button>
     <button class="btn rst" onclick="doReset()">↺ 리셋</button>
   </div>
 </div>
@@ -695,8 +696,11 @@ function simBot(b){
   if(b.capital>=CFG.goal && b.status!=='achieved'){
     b.status='achieved';
     goalAlert(b);
-    // 목표 달성 → 꼴찌 봇에게 섹터 전수
-    setTimeout(()=>transferSector(b), 100);
+    // 목표 달성 → 꼴찌 봇에게 섹터 전수 (미달성 봇이 있을 때만)
+    setTimeout(()=>{
+      transferSector(b);
+      checkAllDone();
+    }, 100);
   }
 }
 
@@ -1123,7 +1127,15 @@ function doReset(){
   BOTS=makeBots();
   globalLog=[]; xferLog=[];
   detBotId=null;
+  isPaused=false;
+  const btn=qs('#pause-btn');
+  if(btn){
+    btn.textContent='⏸ 일시정지';
+    btn.style.borderColor=''; btn.style.color=''; btn.style.cursor='';
+    btn.onclick=togglePause;
+  }
   closeDetail();
+  startSim();
   toast('↺ 초기화 완료');
   render();
 }
@@ -1157,9 +1169,57 @@ const qs=s=>document.querySelector(s);
 // ═══════════════════════════════════════════════════════
 //  타이머 — 시뮬(계산)과 렌더(UI)를 완전 분리
 // ═══════════════════════════════════════════════════════
+let isPaused = false;
+
+function togglePause(){
+  isPaused = !isPaused;
+  const btn = qs('#pause-btn');
+  if(isPaused){
+    clearInterval(SIM_IV);
+    clearInterval(RENDER_TIMER);
+    btn.textContent = '▶ 재개';
+    btn.style.borderColor = 'rgba(0,229,160,.4)';
+    btn.style.color = 'var(--G)';
+    toast('⏸ 시뮬레이션 일시정지');
+  } else {
+    startSim();
+    btn.textContent = '⏸ 일시정지';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    toast('▶ 시뮬레이션 재개');
+  }
+}
+
+function checkAllDone(){
+  const allDone = BOTS.every(b => b.status === 'achieved');
+  if(!allDone) return;
+  // 모든 봇 달성 → 자동 정지
+  clearInterval(SIM_IV);
+  clearInterval(RENDER_TIMER);
+  isPaused = true;
+  const btn = qs('#pause-btn');
+  if(btn){
+    btn.textContent = '🏁 완료';
+    btn.style.borderColor = 'rgba(245,166,35,.5)';
+    btn.style.color = 'var(--A)';
+    btn.onclick = null;  // 클릭 비활성화
+    btn.style.cursor = 'default';
+  }
+  // 최종 렌더 한 번 더
+  render();
+  toast('🏁 전체 목표 달성! 시뮬레이션 완료', 6000);
+  if(TG.on && TG.token && TG.chatId){
+    const tv = BOTS.reduce((a,b)=>a+b.capital,0);
+    const tp = BOTS.reduce((a,b)=>a+b.profit,0);
+    const tf = BOTS.reduce((a,b)=>a+b.totalFees,0);
+    tgSend(`🏁 [AUTOBOT_10] 전체 목표 달성!\n총 자산: ${W(tv)}\n누적 수익: ${W(tp)}\n총 수수료: ${W(tf)}\n경과: ${simElapsedStr()}\n틱: ${totalTicks.toLocaleString()}`);
+  }
+}
+
 function startSim(){
   clearInterval(SIM_IV);
   clearInterval(RENDER_TIMER);
+  if(isPaused) return;
   // 시뮬 루프: 1초마다 speedMul틱 계산
   SIM_IV = setInterval(simStep, 1000);
   // 렌더 루프: 3초마다 UI 갱신 (고정)
