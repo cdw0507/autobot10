@@ -825,13 +825,23 @@ function goalAlert(b){
 function notifyTg(b,ct,p){
   if(!TG.on||!TG.token||!TG.chatId) return;
   if(TG.cond!=='cross'&&TG.cond!=='all') return;
-  tgSend(`${ct==='golden'?'🟢':'🔴'}[${b.sec}]${ct==='golden'?'골든':'데드'}크로스 ${b.sym}@$${p.toFixed(2)}\nMA${maFastN}=${b.lastCross.maFast?.toFixed(2)} MA${maSlowN}=${b.lastCross.maSlow?.toFixed(2)}`);
+  tgSend(`${ct==='golden'?'🟢':'🔴'}[${b.sec}]${ct==='golden'?'골든':'데드'}크로스 ${b.sym}@$${p.toFixed(2)}\nMA${maFastN}=${(b.lastCross.maFast||0).toFixed(2)} MA${maSlowN}=${(b.lastCross.maSlow||0).toFixed(2)}`);
 }
 async function tgSend(msg){
-  if(!TG.token||!TG.chatId)return;
-  try{await fetch(`https://api.telegram.org/bot${TG.token}/sendMessage`,
-    {method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({chat_id:TG.chatId,text:msg})})}catch(e){}
+  if(!TG.token || !TG.chatId) return;
+  const text = String(msg||'').trim();
+  if(!text) return;  // 빈 메시지 차단 → 400 방지
+  try{
+    const res = await fetch(`https://api.telegram.org/bot${TG.token}/sendMessage`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:TG.chatId, text})
+    });
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      console.warn('[TG]',res.status, err.description||'');
+    }
+  }catch(e){ console.warn('[TG network]',e.message); }
 }
 
 // ═══════════════════════════════════════════════════════
