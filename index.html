@@ -1206,19 +1206,65 @@ function doReset(){
   render();
 }
 
-function openTgModal(){qs('#tgmod').style.display='flex'}
+function openTgModal(){
+  // 현재 TG 값을 모달 필드에 채우기
+  if(qs('#m-tok'))  qs('#m-tok').value  = TG.token;
+  if(qs('#m-cid'))  qs('#m-cid').value  = TG.chatId;
+  if(qs('#m-cnd'))  qs('#m-cnd').value  = TG.cond;
+  if(TG.on) qs('#tgtgl')?.classList.add('on');
+  else      qs('#tgtgl')?.classList.remove('on');
+  qs('#tgmod').style.display='flex';
+}
 function closeTgModal(){qs('#tgmod').style.display='none'}
 async function saveTg(){
-  TG.token=qs('#m-tok').value.trim();
-  TG.chatId=qs('#m-cid').value.trim();
-  TG.cond=qs('#m-cnd').value;
-  TG.on=qs('#tgtgl').classList.contains('on');
+  TG.token  = qs('#m-tok').value.trim();
+  TG.chatId = qs('#m-cid').value.trim();
+  TG.cond   = qs('#m-cnd').value;
+  TG.on     = qs('#tgtgl').classList.contains('on');
+  // localStorage에 영구 저장
+  try{
+    localStorage.setItem('autobot_tg', JSON.stringify({
+      token: TG.token, chatId: TG.chatId, cond: TG.cond, on: TG.on
+    }));
+  }catch(e){}
   closeTgModal();
-  if(TG.token) qs('#tgbtn').classList.add('on');
-  toast('✅ 텔레그램 저장');
-  if(TG.token&&TG.chatId){
-    await tgSend('[AUTOBOT_10 v3] 연결완료 ✅\n배속:'+speedMul+'×\nMA'+maFastN+'/'+maSlowN+' 골든크로스 전략 활성화');
+  applyTgUI();
+  toast('✅ 텔레그램 저장됨 (브라우저에 유지)');
+  if(TG.token && TG.chatId){
+    await tgSend('[AUTOBOT_10] 연결완료 ✅\n배속:'+speedMul+'×\nMA'+maFastN+'/'+maSlowN+' 골든크로스 전략 활성화');
     toast('📨 테스트 전송 완료',2500);
+  }
+}
+
+function loadTgFromStorage(){
+  try{
+    const raw = localStorage.getItem('autobot_tg');
+    if(!raw) return;
+    const saved = JSON.parse(raw);
+    TG.token  = saved.token  || '';
+    TG.chatId = saved.chatId || '';
+    TG.cond   = saved.cond   || 'goal';
+    TG.on     = saved.on !== undefined ? saved.on : true;
+    // 모달 필드에도 채워두기 (열었을 때 바로 보임)
+    if(qs('#m-tok'))  qs('#m-tok').value  = TG.token;
+    if(qs('#m-cid'))  qs('#m-cid').value  = TG.chatId;
+    if(qs('#m-cnd'))  qs('#m-cnd').value  = TG.cond;
+    if(TG.on)  qs('#tgtgl')?.classList.add('on');
+    else       qs('#tgtgl')?.classList.remove('on');
+    applyTgUI();
+    if(TG.token) toast('🔑 텔레그램 설정 불러옴', 2000);
+  }catch(e){}
+}
+
+function applyTgUI(){
+  const btn = qs('#tgbtn');
+  if(!btn) return;
+  if(TG.token && TG.chatId){
+    btn.classList.add('on');
+    btn.textContent = '✈ 텔레그램 ✓';
+  } else {
+    btn.classList.remove('on');
+    btn.textContent = '✈ 텔레그램';
   }
 }
 
@@ -1293,9 +1339,10 @@ function startSim(){
 }
 
 // ── INIT ──
+loadTgFromStorage(); // localStorage에서 텔레그램 설정 복원
 render();
-setSpeed();  // 초기 spd-info 세팅
-simStep();   // 첫 틱
+setSpeed();
+simStep();
 startSim();
 </script>
 </body>
